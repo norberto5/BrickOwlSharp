@@ -205,6 +205,9 @@ namespace BrickOwlSharp.Client
         [JsonPropertyName("ship_tax")]
         public string ShipTax { get; set; }
 
+        [JsonPropertyName("ship_collection_point")]
+        public string ShipCollectionPoint { get; set; }
+
         [JsonPropertyName("billing_first_name")]
         public string BillingFirstName { get; set; }
 
