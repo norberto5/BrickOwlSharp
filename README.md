@@ -176,6 +176,16 @@ await client.UpdateOrderStatusAsync(orderId, OrderStatus.Processed, apiKey: "<SH
 
 The `apiKey` parameter is available on every method of `IBrickOwlClient` and defaults to `null`, which falls back to `BrickOwlClientConfiguration.Instance.ApiKey`.
 
+Alternatively, create a dedicated client instance per shop by passing `apiKey` to `BrickOwlClientFactory.Build()`. This avoids repeating the key on every call:
+
+```C#
+IBrickOwlClient shopAClient = BrickOwlClientFactory.Build(apiKey: "<SHOP A API KEY>");
+IBrickOwlClient shopBClient = BrickOwlClientFactory.Build(apiKey: "<SHOP B API KEY>");
+
+List<Order> shopAOrders = await shopAClient.GetOrdersAsync();
+List<Order> shopBOrders = await shopBClient.GetOrdersAsync();
+```
+
 ## Inventory
 Add an item to the inventory:
 
