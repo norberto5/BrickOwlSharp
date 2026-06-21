@@ -101,6 +101,7 @@ namespace BrickOwlSharp.Client
             int? limit = null,
             OrderType? orderType = null,
             OrderSortType? orderSortType = null,
+            string apiKey = default,
             CancellationToken cancellationToken = default)
         {
             var url = new Uri(_baseUri, $"order/list").ToString();
@@ -137,35 +138,35 @@ namespace BrickOwlSharp.Client
                 url = AppendOptionalParam(url, "sort_by", orderSortType.Value.ToString().ToLower());
             }
 
-            List<Order> result = await ExecuteGet<List<Order>>(url, cancellationToken);
+            List<Order> result = await ExecuteGet<List<Order>>(url, apiKey, cancellationToken);
             _measureRequest(ResourceType.Order, cancellationToken);
             return result;
         } // !GetOrdersAsync()
 
 
-        public async Task<OrderDetails> GetOrderAsync(int orderId,  CancellationToken cancellationToken = default)
+        public async Task<OrderDetails> GetOrderAsync(int orderId, string apiKey = default, CancellationToken cancellationToken = default)
         {
             var detailsUrl = new Uri(_baseUri, $"order/view").ToString();
             detailsUrl = AppendOptionalParam(detailsUrl, "order_id", orderId);
-            OrderDetails details = await ExecuteGet<OrderDetails>(detailsUrl, cancellationToken);
+            OrderDetails details = await ExecuteGet<OrderDetails>(detailsUrl, apiKey, cancellationToken);
             _measureRequest(ResourceType.Order, cancellationToken);
 
             var itemUrl = new Uri(_baseUri, $"order/items").ToString();
             itemUrl = AppendOptionalParam(itemUrl, "order_id", orderId);
-            List<OrderItem> items = await ExecuteGet<List<OrderItem>>(itemUrl, cancellationToken);
+            List<OrderItem> items = await ExecuteGet<List<OrderItem>>(itemUrl, apiKey, cancellationToken);
             _measureRequest(ResourceType.Order, cancellationToken);
             details.OrderItems = items;
             return details;
         } // !GetOrderAsync()
 
 
-        public async Task<bool> UpdateOrderStatusAsync(int orderId, OrderStatus status, CancellationToken cancellationToken = default)
+        public async Task<bool> UpdateOrderStatusAsync(int orderId, OrderStatus status, string apiKey = default, CancellationToken cancellationToken = default)
         {
             Dictionary<string, string> formData = new Dictionary<string, string>()
             {
                 { "order_id", orderId.ToString() },
                 { "status_id", ((int)status).ToString() },
-                { "key", BrickOwlClientConfiguration.Instance.ApiKey }
+                { "key", apiKey ?? BrickOwlClientConfiguration.Instance.ApiKey }
             };
 
             var url = new Uri(_baseUri, $"order/set_status").ToString();
@@ -190,13 +191,13 @@ namespace BrickOwlSharp.Client
         } // !UpdateOrderStatusAsync()
 
 
-        public async Task<bool> UpdateOrderTrackingAsync(int orderId, string trackingIdOrUrl, CancellationToken cancellationToken = default)
+        public async Task<bool> UpdateOrderTrackingAsync(int orderId, string trackingIdOrUrl, string apiKey = default, CancellationToken cancellationToken = default)
         {
         	Dictionary<string, string> formData = new Dictionary<string, string>
         	{
         		{ "order_id", orderId.ToString() },
         		{ "tracking_id", trackingIdOrUrl },
-        		{ "key", BrickOwlClientConfiguration.Instance.ApiKey }
+        		{ "key", apiKey ?? BrickOwlClientConfiguration.Instance.ApiKey }
         	};
         
         	var url = new Uri(_baseUri, "order/tracking").ToString();
@@ -215,20 +216,22 @@ namespace BrickOwlSharp.Client
 
 
         public async Task<List<Wishlist>> GetWishlistsAsync(
+           string apiKey = default,
            CancellationToken cancellationToken = default)
         {
             var url = new Uri(_baseUri, $"wishlist/lists").ToString();
-            List<Wishlist> result = await ExecuteGet<List<Wishlist>>(url, cancellationToken);
+            List<Wishlist> result = await ExecuteGet<List<Wishlist>>(url, apiKey, cancellationToken);
             _measureRequest(ResourceType.Wishlist, cancellationToken);
             return result;
         } // !GetWishlistsAsync()
 
 
         public async Task<List<CatalogItem>> GetCatalogAsync(
+           string apiKey = default,
            CancellationToken cancellationToken = default)
         {
             var url = new Uri(_baseUri, $"catalog/list").ToString();
-            List<CatalogItem> result = await ExecuteGet<List<CatalogItem>>(url, cancellationToken);
+            List<CatalogItem> result = await ExecuteGet<List<CatalogItem>>(url, apiKey, cancellationToken);
             _measureRequest(ResourceType.Catalog, cancellationToken);
             return result;
         } // !GetCatalogAsync()
@@ -236,6 +239,7 @@ namespace BrickOwlSharp.Client
 
         public async Task<BulkBatchResponse> BulkBatchAsync(
             IEnumerable<(string Endpoint, string RequestMethod, IEnumerable<Dictionary<string, string>> Parameters)> requests,
+            string apiKey = default,
             CancellationToken cancellationToken = default)
         {
             var payload = new
@@ -253,7 +257,7 @@ namespace BrickOwlSharp.Client
             Dictionary<string, string> formData = new Dictionary<string, string>()
             {
                 { "requests", requestsJson },
-                { "key", BrickOwlClientConfiguration.Instance.ApiKey }
+                { "key", apiKey ?? BrickOwlClientConfiguration.Instance.ApiKey }
             };
 
             var url = new Uri(_baseUri, "bulk/batch").ToString();
@@ -263,53 +267,53 @@ namespace BrickOwlSharp.Client
         } // !BulkBatchAsync()
 
 
-        public async Task<CatalogBulkResponse> CatalogBulkAsync(string type, CancellationToken cancellationToken = default)
+        public async Task<CatalogBulkResponse> CatalogBulkAsync(string type, string apiKey = default, CancellationToken cancellationToken = default)
         {
             var url = new Uri(_baseUri, "catalog/bulk").ToString();
             url = AppendOptionalParam(url, "type", type);
-            CatalogBulkResponse result = await ExecuteGet<CatalogBulkResponse>(url, cancellationToken);
+            CatalogBulkResponse result = await ExecuteGet<CatalogBulkResponse>(url, apiKey, cancellationToken);
             _measureRequest(ResourceType.Catalog, cancellationToken);
             return result;
         } // !CatalogBulkAsync()
 
 
-        public async Task<CatalogBulkLookupResponse> CatalogBulkLookupAsync(IEnumerable<string> boids, CancellationToken cancellationToken = default)
+        public async Task<CatalogBulkLookupResponse> CatalogBulkLookupAsync(IEnumerable<string> boids, string apiKey = default, CancellationToken cancellationToken = default)
         {
             var url = new Uri(_baseUri, "catalog/bulk_lookup").ToString();
             url = AppendOptionalParam(url, "boids", string.Join(",", boids ?? Enumerable.Empty<string>()));
-            CatalogBulkLookupResponse result = await ExecuteGet<CatalogBulkLookupResponse>(url, cancellationToken);
+            CatalogBulkLookupResponse result = await ExecuteGet<CatalogBulkLookupResponse>(url, apiKey, cancellationToken);
             _measureRequest(ResourceType.Catalog, cancellationToken);
             return result;
         } // !CatalogBulkLookupAsync()
 
 
-        public async Task<CatalogSearchResponse> CatalogSearchAsync(string query, int? page = null, string missingData = null, CancellationToken cancellationToken = default)
+        public async Task<CatalogSearchResponse> CatalogSearchAsync(string query, int? page = null, string missingData = null, string apiKey = default, CancellationToken cancellationToken = default)
         {
             var url = new Uri(_baseUri, "catalog/search").ToString();
             url = AppendOptionalParam(url, "query", query);
             url = AppendOptionalParam(url, "page", page);
             url = AppendOptionalParam(url, "missing_data", missingData);
-            CatalogSearchResponse result = await ExecuteGet<CatalogSearchResponse>(url, cancellationToken);
+            CatalogSearchResponse result = await ExecuteGet<CatalogSearchResponse>(url, apiKey, cancellationToken);
             _measureRequest(ResourceType.Catalog, cancellationToken);
             return result;
         } // !CatalogSearchAsync()
 
 
-        public async Task<CatalogConditionListResponse> GetCatalogConditionListAsync(CancellationToken cancellationToken = default)
+        public async Task<CatalogConditionListResponse> GetCatalogConditionListAsync(string apiKey = default, CancellationToken cancellationToken = default)
         {
             var url = new Uri(_baseUri, "catalog/condition_list").ToString();
-            CatalogConditionListResponse result = await ExecuteGet<CatalogConditionListResponse>(url, cancellationToken);
+            CatalogConditionListResponse result = await ExecuteGet<CatalogConditionListResponse>(url, apiKey, cancellationToken);
             _measureRequest(ResourceType.Catalog, cancellationToken);
             return result;
         } // !GetCatalogConditionListAsync()
 
 
-        public async Task<CatalogFieldOptionListResponse> GetCatalogFieldOptionListAsync(string type, string language = null, CancellationToken cancellationToken = default)
+        public async Task<CatalogFieldOptionListResponse> GetCatalogFieldOptionListAsync(string type, string language = null, string apiKey = default, CancellationToken cancellationToken = default)
         {
             var url = new Uri(_baseUri, "catalog/field_option_list").ToString();
             url = AppendOptionalParam(url, "type", type);
             url = AppendOptionalParam(url, "language", language);
-            CatalogFieldOptionListResponse result = await ExecuteGet<CatalogFieldOptionListResponse>(url, cancellationToken);
+            CatalogFieldOptionListResponse result = await ExecuteGet<CatalogFieldOptionListResponse>(url, apiKey, cancellationToken);
             _measureRequest(ResourceType.Catalog, cancellationToken);
             return result;
         } // !GetCatalogFieldOptionListAsync()
@@ -318,6 +322,7 @@ namespace BrickOwlSharp.Client
             IEnumerable<(string DesignId, int? ColorId, string Boid, int Quantity)> items,
             string condition,
             string country,
+            string apiKey = default,
             CancellationToken cancellationToken = default)
         {
             var itemList = new List<Dictionary<string, string>>();
@@ -356,7 +361,7 @@ namespace BrickOwlSharp.Client
                 { "items", itemsJson },
                 { "condition", condition },
                 { "country", country },
-                { "key", BrickOwlClientConfiguration.Instance.ApiKey }
+                { "key", apiKey ?? BrickOwlClientConfiguration.Instance.ApiKey }
             };
 
             var url = new Uri(_baseUri, "catalog/cart_basic").ToString();
@@ -366,7 +371,7 @@ namespace BrickOwlSharp.Client
         } // !CreateCatalogCartBasicAsync()
 
 
-        public async Task<Dictionary<string,CatalogItemAvailability>> CatalogAvailabilityAsync(string boid, string country, int? quantity = null, string storeCountry = null, CancellationToken cancellationToken = default)
+        public async Task<Dictionary<string,CatalogItemAvailability>> CatalogAvailabilityAsync(string boid, string country, int? quantity = null, string storeCountry = null, string apiKey = default, CancellationToken cancellationToken = default)
         {
             var url = new Uri(_baseUri, $"catalog/availability").ToString();
             url = AppendOptionalParam(url, "boid", boid);
@@ -382,23 +387,23 @@ namespace BrickOwlSharp.Client
                 url = AppendOptionalParam(url, "store_country", storeCountry);
             }
 
-            Dictionary<string, CatalogItemAvailability> result = await ExecuteGet<Dictionary<string, CatalogItemAvailability>>(url, cancellationToken);
+            Dictionary<string, CatalogItemAvailability> result = await ExecuteGet<Dictionary<string, CatalogItemAvailability>>(url, apiKey, cancellationToken);
             _measureRequest(ResourceType.Catalog, cancellationToken);
             return result;
         } // !CatalogAvailabilityAsync()
 
 
-        public async Task<CatalogItem> CatalogLookupAsync(string boid, CancellationToken cancellationToken = default)
+        public async Task<CatalogItem> CatalogLookupAsync(string boid, string apiKey = default, CancellationToken cancellationToken = default)
         {
             var url = new Uri(_baseUri, $"catalog/lookup").ToString();
             url = AppendOptionalParam(url, "boid", boid);
-            CatalogItem result = await ExecuteGet<CatalogItem> (url, cancellationToken);
+            CatalogItem result = await ExecuteGet<CatalogItem>(url, apiKey, cancellationToken);
             _measureRequest(ResourceType.Catalog, cancellationToken);
             return result;
         } // !CatalogLookupAsync()
 
 
-        public async Task<List<string>> CatalogIdLookupAsync(string boid, ItemType type, IdType? idType = null, CancellationToken cancellationToken = default)
+        public async Task<List<string>> CatalogIdLookupAsync(string boid, ItemType type, IdType? idType = null, string apiKey = default, CancellationToken cancellationToken = default)
         {
             var url = new Uri(_baseUri, $"catalog/id_lookup").ToString();
             url = AppendOptionalParam(url, "id", boid);
@@ -409,7 +414,7 @@ namespace BrickOwlSharp.Client
                 url = AppendOptionalParam(url, "id_type", idType.Value.EnumToString());
             }
 
-            CatalogItemIds result = await ExecuteGet<CatalogItemIds>(url, cancellationToken);
+            CatalogItemIds result = await ExecuteGet<CatalogItemIds>(url, apiKey, cancellationToken);
             _measureRequest(ResourceType.Catalog, cancellationToken);
             return result.BOIDs;
         } // !CatalogIdLookupAsync()
@@ -417,9 +422,10 @@ namespace BrickOwlSharp.Client
 
         public async Task<NewInventoryResult> CreateInventoryAsync(
             NewInventory newInventory,
+            string apiKey = default,
             CancellationToken cancellationToken = default)
         {
-            Dictionary<string, string> formData = _ObjectToFormData(newInventory);
+            Dictionary<string, string> formData = _ObjectToFormData(newInventory, apiKey: apiKey);
 
             if (!newInventory.ColorId.HasValue)
             {
@@ -435,9 +441,10 @@ namespace BrickOwlSharp.Client
 
         public async Task<bool> UpdateInventoryAsync(
             UpdateInventory updatedInventory,
+            string apiKey = default,
             CancellationToken cancellationToken = default)
         {
-            Dictionary<string, string> formData = _ObjectToFormData(updatedInventory);
+            Dictionary<string, string> formData = _ObjectToFormData(updatedInventory, apiKey: apiKey);
 
             var url = new Uri(_baseUri, $"inventory/update").ToString();
             BrickOwlResult result = await ExecutePost<BrickOwlResult>(url, formData, cancellationToken: cancellationToken);
@@ -448,6 +455,7 @@ namespace BrickOwlSharp.Client
 
         public async Task<List<Inventory>> GetInventoryAsync(
             string filter = null, bool? activeOnly = null, string externalId = null, int? lotId = null,
+            string apiKey = default,
             CancellationToken cancellationToken = default)
         {
             var url = new Uri(_baseUri, $"inventory/list").ToString();
@@ -462,7 +470,7 @@ namespace BrickOwlSharp.Client
             url = AppendOptionalParam(url, "external_id_1", externalId);
             url = AppendOptionalParam(url, "lot_id", lotId);
 
-            List<Inventory> result = await ExecuteGet<List<Inventory>>(url, cancellationToken);
+            List<Inventory> result = await ExecuteGet<List<Inventory>>(url, apiKey, cancellationToken);
             _measureRequest(ResourceType.Inventory, cancellationToken);
             return result;
         } // !GetInventoryAsync()
@@ -470,9 +478,10 @@ namespace BrickOwlSharp.Client
 
         public async Task<bool> DeleteInventoryAsync(
            DeleteInventory deleteInventory,
+           string apiKey = default,
            CancellationToken cancellationToken = default)
         {
-            Dictionary<string, string> formData = _ObjectToFormData(deleteInventory);            
+            Dictionary<string, string> formData = _ObjectToFormData(deleteInventory, apiKey: apiKey);
 
             var url = new Uri(_baseUri, $"inventory/delete").ToString();
             BrickOwlResult result = await ExecutePost<BrickOwlResult>(url, formData, cancellationToken: cancellationToken);
@@ -481,33 +490,33 @@ namespace BrickOwlSharp.Client
         } // !GetInventoryAsync()
 
 
-        public async Task<List<Color>> GetColorListAsyn(CancellationToken cancellationToken = default)
+        public async Task<List<Color>> GetColorListAsyn(string apiKey = default, CancellationToken cancellationToken = default)
         {
             var url = new Uri(_baseUri, $"catalog/color_list").ToString();
 
-            Dictionary<string, Color> result = await ExecuteGet<Dictionary<string, Color>>(url, cancellationToken);
+            Dictionary<string, Color> result = await ExecuteGet<Dictionary<string, Color>>(url, apiKey, cancellationToken);
             _measureRequest(ResourceType.Catalog, cancellationToken);
             return result.Values.ToList();
         } // !GetColorListAsyn()
 
 
-        public async Task<List<ItemInventoryItem>> GetItemInventoryAsync(string boid, CancellationToken cancellationToken = default)
+        public async Task<List<ItemInventoryItem>> GetItemInventoryAsync(string boid, string apiKey = default, CancellationToken cancellationToken = default)
         {
             var url = new Uri(_baseUri, $"catalog/inventory").ToString();
             url = AppendOptionalParam(url, "boid", boid);
 
-            ItemInventoryItemCollection result = await ExecuteGet<ItemInventoryItemCollection>(url, cancellationToken);
+            ItemInventoryItemCollection result = await ExecuteGet<ItemInventoryItemCollection>(url, apiKey, cancellationToken);
             _measureRequest(ResourceType.Catalog, cancellationToken);
             return result?.Items;
         } // !GetItemInventoryAsync()
 
-        public async Task<bool> UpdateOrderNoteAsync(int orderId, string note, CancellationToken cancellationToken = default)
+        public async Task<bool> UpdateOrderNoteAsync(int orderId, string note, string apiKey = default, CancellationToken cancellationToken = default)
         {
             Dictionary<string, string> formData = new Dictionary<string, string>()
             {
                 { "order_id", orderId.ToString() },
                 { "note", note },
-                { "key", BrickOwlClientConfiguration.Instance.ApiKey }
+                { "key", apiKey ?? BrickOwlClientConfiguration.Instance.ApiKey }
             };
 
             var url = new Uri(_baseUri, "order/note").ToString();
@@ -525,20 +534,20 @@ namespace BrickOwlSharp.Client
         } // !UpdateOrderNoteAsync()
 
 
-        public async Task<OrderTaxSchemesResponse> GetOrderTaxSchemesAsync(CancellationToken cancellationToken = default)
+        public async Task<OrderTaxSchemesResponse> GetOrderTaxSchemesAsync(string apiKey = default, CancellationToken cancellationToken = default)
         {
             var url = new Uri(_baseUri, "order/tax_schemes").ToString();
-            OrderTaxSchemesResponse result = await ExecuteGet<OrderTaxSchemesResponse>(url, cancellationToken);
+            OrderTaxSchemesResponse result = await ExecuteGet<OrderTaxSchemesResponse>(url, apiKey, cancellationToken);
             _measureRequest(ResourceType.Order, cancellationToken);
             return result;
         } // !GetOrderTaxSchemesAsync()
 
-        public async Task<bool> SetOrderNotifyAsync(string ipAddress, CancellationToken cancellationToken = default)
+        public async Task<bool> SetOrderNotifyAsync(string ipAddress, string apiKey = default, CancellationToken cancellationToken = default)
         {
             Dictionary<string, string> formData = new Dictionary<string, string>()
             {
                 { "ip", ipAddress },
-                { "key", BrickOwlClientConfiguration.Instance.ApiKey }
+                { "key", apiKey ?? BrickOwlClientConfiguration.Instance.ApiKey }
             };
 
             var url = new Uri(_baseUri, "order/notify").ToString();
@@ -556,52 +565,52 @@ namespace BrickOwlSharp.Client
         }  // !SetOrderNotifyAsync()
 
 
-        public async Task<UserDetailsResponse> GetUserDetailsAsync(CancellationToken cancellationToken = default)
+        public async Task<UserDetailsResponse> GetUserDetailsAsync(string apiKey = default, CancellationToken cancellationToken = default)
         {
             var url = new Uri(_baseUri, "user/details").ToString();
-            UserDetailsResponse result = await ExecuteGet<UserDetailsResponse>(url, cancellationToken);
+            UserDetailsResponse result = await ExecuteGet<UserDetailsResponse>(url, apiKey, cancellationToken);
             _measureRequest(ResourceType.Unknown, cancellationToken);
             return result;
         } // !GetUserDetailsAsync()
 
 
-        public async Task<UserAddressesResponse> GetUserAddressesAsync(CancellationToken cancellationToken = default)
+        public async Task<UserAddressesResponse> GetUserAddressesAsync(string apiKey = default, CancellationToken cancellationToken = default)
         {
             var url = new Uri(_baseUri, "user/addresses").ToString();
-            UserAddressesResponse result = await ExecuteGet<UserAddressesResponse>(url, cancellationToken);
+            UserAddressesResponse result = await ExecuteGet<UserAddressesResponse>(url, apiKey, cancellationToken);
             _measureRequest(ResourceType.Unknown, cancellationToken);
             return result;
         } // !GetUserAddressesAsync()
 
 
-        public async Task<TokenDetailsResponse> GetTokenDetailsAsync(CancellationToken cancellationToken = default)
+        public async Task<TokenDetailsResponse> GetTokenDetailsAsync(string apiKey = default, CancellationToken cancellationToken = default)
         {
             var url = new Uri(_baseUri, "token/details").ToString();
-            TokenDetailsResponse result = await ExecuteGet<TokenDetailsResponse>(url, cancellationToken);
+            TokenDetailsResponse result = await ExecuteGet<TokenDetailsResponse>(url, apiKey, cancellationToken);
             _measureRequest(ResourceType.Unknown, cancellationToken);
             return result;
         } // !GetTokenDetailsAsync()
 
 
-        public async Task<InvoiceTransactionsResponse> GetInvoiceTransactionsAsync(string invoiceId, string idType, CancellationToken cancellationToken = default)
+        public async Task<InvoiceTransactionsResponse> GetInvoiceTransactionsAsync(string invoiceId, string idType, string apiKey = default, CancellationToken cancellationToken = default)
         {
             var url = new Uri(_baseUri, "invoice/transactions").ToString();
             url = AppendOptionalParam(url, "invoice_id", invoiceId);
             url = AppendOptionalParam(url, "id_type", idType);
-            InvoiceTransactionsResponse result = await ExecuteGet<InvoiceTransactionsResponse>(url, cancellationToken);
+            InvoiceTransactionsResponse result = await ExecuteGet<InvoiceTransactionsResponse>(url, apiKey, cancellationToken);
             _measureRequest(ResourceType.Unknown, cancellationToken);
             return result;
         } // !GetInvoiceTransactionsAsync()
 
 
-        public async Task<bool> LeaveFeedbackAsync(int orderId, FeedbackRating rating, string comment = null, CancellationToken cancellationToken = default)
+        public async Task<bool> LeaveFeedbackAsync(int orderId, FeedbackRating rating, string comment = null, string apiKey = default, CancellationToken cancellationToken = default)
         {
             Dictionary<string, string> formData = new Dictionary<string, string>()
             {
                 { "order_id", orderId.ToString() },
                 { "rating", ((int)rating).ToString() },
                 { "comment", comment },
-                { "key", BrickOwlClientConfiguration.Instance.ApiKey }
+                { "key", apiKey ?? BrickOwlClientConfiguration.Instance.ApiKey }
             };
 
             var url = new Uri(_baseUri, $"order/feedback").ToString();
@@ -626,10 +635,10 @@ namespace BrickOwlSharp.Client
         } // !LeaveFeedbackAsync()
 
 
-        private static string AppendApiKey(string url)
+        private static string AppendApiKey(string url, string apiKey = null)
         {
             BrickOwlClientConfiguration.Instance.ValidateThrowException();
-            return AppendOptionalParam(url, "key", BrickOwlClientConfiguration.Instance.ApiKey);
+            return AppendOptionalParam(url, "key", apiKey ?? BrickOwlClientConfiguration.Instance.ApiKey);
         } // !AppendApiKey()
 
 
@@ -648,9 +657,9 @@ namespace BrickOwlSharp.Client
         } // !AppendOptionalParam()
 
 
-        private async Task<TResponse> ExecuteGet<TResponse>(string url, CancellationToken cancellationToken = default)
+        private async Task<TResponse> ExecuteGet<TResponse>(string url, string apiKey = null, CancellationToken cancellationToken = default)
         {
-            var urlWithKey = AppendApiKey(url);
+            var urlWithKey = AppendApiKey(url, apiKey);
 
             using var message = new HttpRequestMessage(HttpMethod.Get, urlWithKey);
 
@@ -716,7 +725,7 @@ namespace BrickOwlSharp.Client
         } // !ExecutePost()
 
 
-        private Dictionary<string, string> _ObjectToFormData(object o, bool addKey = true)
+        private Dictionary<string, string> _ObjectToFormData(object o, bool addKey = true, string apiKey = null)
         {
             Dictionary<string, string> result = new Dictionary<string, string>();
 
@@ -768,7 +777,7 @@ namespace BrickOwlSharp.Client
 
             if (addKey)
             {
-                result.Add("key", BrickOwlClientConfiguration.Instance.ApiKey);
+                result.Add("key", apiKey ?? BrickOwlClientConfiguration.Instance.ApiKey);
             }
 
             return result;
