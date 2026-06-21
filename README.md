@@ -153,6 +153,39 @@ foreach (BrickOwlSharp.Client.Color color in allColors)
 }
 ```
 
+## Multiple stores / per-call API key
+By default all calls use the key set on the singleton:
+
+```C#
+BrickOwlClientConfiguration.Instance.ApiKey = "<YOUR API KEY>";
+IBrickOwlClient client = BrickOwlClientFactory.Build();
+```
+
+If you need to serve **multiple BrickOwl shops** from the same process, pass `apiKey` directly to any method. The per-call key takes precedence over the singleton for that single request; all other calls continue using the singleton key.
+
+```C#
+// Shop A uses the singleton key (set once at startup).
+List<Order> shopAOrders = await client.GetOrdersAsync();
+
+// Shop B overrides with its own key for this call only.
+List<Order> shopBOrders = await client.GetOrdersAsync(apiKey: "<SHOP B API KEY>");
+
+// Works identically for write operations.
+await client.UpdateOrderStatusAsync(orderId, OrderStatus.Processed, apiKey: "<SHOP B API KEY>");
+```
+
+The `apiKey` parameter is available on every method of `IBrickOwlClient` and defaults to `null`, which falls back to `BrickOwlClientConfiguration.Instance.ApiKey`.
+
+Alternatively, create a dedicated client instance per shop by passing `apiKey` to `BrickOwlClientFactory.Build()`. This avoids repeating the key on every call:
+
+```C#
+IBrickOwlClient shopAClient = BrickOwlClientFactory.Build(apiKey: "<SHOP A API KEY>");
+IBrickOwlClient shopBClient = BrickOwlClientFactory.Build(apiKey: "<SHOP B API KEY>");
+
+List<Order> shopAOrders = await shopAClient.GetOrdersAsync();
+List<Order> shopBOrders = await shopBClient.GetOrdersAsync();
+```
+
 ## Inventory
 Add an item to the inventory:
 

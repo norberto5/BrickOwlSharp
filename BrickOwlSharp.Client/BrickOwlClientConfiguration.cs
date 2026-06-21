@@ -35,27 +35,15 @@ namespace BrickOwlSharp.Client
         public string ApiKey { get; set; }
 
 
-        private static BrickOwlClientConfiguration _instance;
-        public static BrickOwlClientConfiguration Instance
-        {
-            get
-            {
-                if (BrickOwlClientConfiguration._instance is null)
-                {
-                    BrickOwlClientConfiguration._instance = new BrickOwlClientConfiguration();
-                }
-                return _instance;
-            }
-        }
+        private static readonly Lazy<BrickOwlClientConfiguration> _lazy =
+            new Lazy<BrickOwlClientConfiguration>(() => new BrickOwlClientConfiguration());
+
+        public static BrickOwlClientConfiguration Instance => _lazy.Value;
 
 
         private BrickOwlClientConfiguration()
         {
         }
 
-
-        internal void ValidateThrowException()
-        {
-        }
     }
 }
