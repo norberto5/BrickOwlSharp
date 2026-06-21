@@ -136,4 +136,38 @@ public class BrickOwlClientApiKeyTests
         Assert.Contains("key=shop3-key", handler.CapturedBody);
         Assert.DoesNotContain("key=instance-key", handler.CapturedBody);
     }
+
+    [Fact]
+    public async Task GetOrdersAsync_WithNoKeyAnywhere_ThrowsInvalidOperationException()
+    {
+        BrickOwlClientConfiguration.Instance.ApiKey = null;
+        var (client, _) = BuildClient("[]");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => client.GetOrdersAsync());
+    }
+
+    [Fact]
+    public async Task Build_WithFactoryApiKey_UsesFactoryKeyWhenNoPerCallKey()
+    {
+        BrickOwlClientConfiguration.Instance.ApiKey = null;
+        var handler = new CapturingHandler("[]");
+        var client = BrickOwlClientFactory.Build(new HttpClient(handler), apiKey: "factory-key");
+
+        await client.GetOrdersAsync();
+
+        Assert.Contains("key=factory-key", handler.CapturedUrl);
+    }
+
+    [Fact]
+    public async Task Build_WithFactoryApiKey_PerCallKeyOverridesFactoryKey()
+    {
+        BrickOwlClientConfiguration.Instance.ApiKey = null;
+        var handler = new CapturingHandler("[]");
+        var client = BrickOwlClientFactory.Build(new HttpClient(handler), apiKey: "factory-key");
+
+        await client.GetOrdersAsync(apiKey: "override-key");
+
+        Assert.Contains("key=override-key", handler.CapturedUrl);
+        Assert.DoesNotContain("key=factory-key", handler.CapturedUrl);
+    }
 }

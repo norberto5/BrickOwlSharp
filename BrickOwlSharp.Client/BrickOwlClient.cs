@@ -45,16 +45,19 @@ namespace BrickOwlSharp.Client
         private static readonly Uri _baseUri = new Uri("https://api.brickowl.com/v1/");
         private readonly HttpClient _httpClient;
         private readonly bool _disposeHttpClient;
+        private readonly string _defaultApiKey;
 
         private bool _isDisposed;
         private readonly IBrickOwlRequestHandler _requestHandler;
 
         public BrickOwlClient(HttpClient httpClient,
             bool disposeHttpClient,
+            string defaultApiKey = null,
             IBrickOwlRequestHandler requestHandler = null)
         {
             _httpClient = httpClient;
             _disposeHttpClient = disposeHttpClient;
+            _defaultApiKey = defaultApiKey;
             _requestHandler = requestHandler;
         }
 
@@ -146,16 +149,18 @@ namespace BrickOwlSharp.Client
 
         public async Task<OrderDetails> GetOrderAsync(int orderId, string apiKey = default, CancellationToken cancellationToken = default)
         {
-            var detailsUrl = new Uri(_baseUri, $"order/view").ToString();
-            detailsUrl = AppendOptionalParam(detailsUrl, "order_id", orderId);
-            OrderDetails details = await ExecuteGet<OrderDetails>(detailsUrl, apiKey, cancellationToken);
+            var detailsUrl = AppendOptionalParam(new Uri(_baseUri, "order/view").ToString(), "order_id", orderId);
+            var itemUrl    = AppendOptionalParam(new Uri(_baseUri, "order/items").ToString(), "order_id", orderId);
+
+            var detailsTask = ExecuteGet<OrderDetails>(detailsUrl, apiKey, cancellationToken);
+            var itemsTask   = ExecuteGet<List<OrderItem>>(itemUrl, apiKey, cancellationToken);
+
+            await Task.WhenAll(detailsTask, itemsTask);
+            _measureRequest(ResourceType.Order, cancellationToken);
             _measureRequest(ResourceType.Order, cancellationToken);
 
-            var itemUrl = new Uri(_baseUri, $"order/items").ToString();
-            itemUrl = AppendOptionalParam(itemUrl, "order_id", orderId);
-            List<OrderItem> items = await ExecuteGet<List<OrderItem>>(itemUrl, apiKey, cancellationToken);
-            _measureRequest(ResourceType.Order, cancellationToken);
-            details.OrderItems = items;
+            var details = detailsTask.Result;
+            details.OrderItems = itemsTask.Result;
             return details;
         } // !GetOrderAsync()
 
@@ -166,7 +171,7 @@ namespace BrickOwlSharp.Client
             {
                 { "order_id", orderId.ToString() },
                 { "status_id", ((int)status).ToString() },
-                { "key", apiKey ?? BrickOwlClientConfiguration.Instance.ApiKey }
+                { "key", ResolveApiKey(apiKey) }
             };
 
             var url = new Uri(_baseUri, $"order/set_status").ToString();
@@ -197,7 +202,7 @@ namespace BrickOwlSharp.Client
         	{
         		{ "order_id", orderId.ToString() },
         		{ "tracking_id", trackingIdOrUrl },
-        		{ "key", apiKey ?? BrickOwlClientConfiguration.Instance.ApiKey }
+        		{ "key", ResolveApiKey(apiKey) }
         	};
         
         	var url = new Uri(_baseUri, "order/tracking").ToString();
@@ -257,7 +262,7 @@ namespace BrickOwlSharp.Client
             Dictionary<string, string> formData = new Dictionary<string, string>()
             {
                 { "requests", requestsJson },
-                { "key", apiKey ?? BrickOwlClientConfiguration.Instance.ApiKey }
+                { "key", ResolveApiKey(apiKey) }
             };
 
             var url = new Uri(_baseUri, "bulk/batch").ToString();
@@ -361,7 +366,7 @@ namespace BrickOwlSharp.Client
                 { "items", itemsJson },
                 { "condition", condition },
                 { "country", country },
-                { "key", apiKey ?? BrickOwlClientConfiguration.Instance.ApiKey }
+                { "key", ResolveApiKey(apiKey) }
             };
 
             var url = new Uri(_baseUri, "catalog/cart_basic").ToString();
@@ -516,7 +521,7 @@ namespace BrickOwlSharp.Client
             {
                 { "order_id", orderId.ToString() },
                 { "note", note },
-                { "key", apiKey ?? BrickOwlClientConfiguration.Instance.ApiKey }
+                { "key", ResolveApiKey(apiKey) }
             };
 
             var url = new Uri(_baseUri, "order/note").ToString();
@@ -547,7 +552,7 @@ namespace BrickOwlSharp.Client
             Dictionary<string, string> formData = new Dictionary<string, string>()
             {
                 { "ip", ipAddress },
-                { "key", apiKey ?? BrickOwlClientConfiguration.Instance.ApiKey }
+                { "key", ResolveApiKey(apiKey) }
             };
 
             var url = new Uri(_baseUri, "order/notify").ToString();
@@ -610,7 +615,7 @@ namespace BrickOwlSharp.Client
                 { "order_id", orderId.ToString() },
                 { "rating", ((int)rating).ToString() },
                 { "comment", comment },
-                { "key", apiKey ?? BrickOwlClientConfiguration.Instance.ApiKey }
+                { "key", ResolveApiKey(apiKey) }
             };
 
             var url = new Uri(_baseUri, $"order/feedback").ToString();
@@ -635,10 +640,20 @@ namespace BrickOwlSharp.Client
         } // !LeaveFeedbackAsync()
 
 
-        private static string AppendApiKey(string url, string apiKey = null)
+        private string ResolveApiKey(string perCallKey)
         {
-            BrickOwlClientConfiguration.Instance.ValidateThrowException();
-            return AppendOptionalParam(url, "key", apiKey ?? BrickOwlClientConfiguration.Instance.ApiKey);
+            var key = perCallKey ?? _defaultApiKey ?? BrickOwlClientConfiguration.Instance.ApiKey;
+            if (string.IsNullOrEmpty(key))
+                throw new InvalidOperationException(
+                    "No API key configured. Set BrickOwlClientConfiguration.Instance.ApiKey, " +
+                    "pass apiKey to BrickOwlClientFactory.Build(), or pass apiKey directly to the method.");
+            return key;
+        } // !ResolveApiKey()
+
+
+        private string AppendApiKey(string url, string apiKey = null)
+        {
+            return AppendOptionalParam(url, "key", ResolveApiKey(apiKey));
         } // !AppendApiKey()
 
 
@@ -777,7 +792,7 @@ namespace BrickOwlSharp.Client
 
             if (addKey)
             {
-                result.Add("key", apiKey ?? BrickOwlClientConfiguration.Instance.ApiKey);
+                result.Add("key", ResolveApiKey(apiKey));
             }
 
             return result;
