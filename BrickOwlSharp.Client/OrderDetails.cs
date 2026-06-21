@@ -205,6 +205,18 @@ namespace BrickOwlSharp.Client
         [JsonPropertyName("ship_tax")]
         public string ShipTax { get; set; }
 
+        /// <summary>
+        /// Identifier of the collection point (e.g. a parcel locker) used as the shipping destination,
+        /// instead of a home address. Populated when the buyer selects a pickup-point delivery method
+        /// such as InPost in Poland.
+        /// </summary>
+        /// <example>
+        /// Click-and-collect order: <c>"PL_LOD226M"</c><br/>
+        /// Standard home-delivery order: <c>null</c>
+        /// </example>
+        [JsonPropertyName("ship_collection_point")]
+        public string ShipCollectionPoint { get; set; }
+
         [JsonPropertyName("billing_first_name")]
         public string BillingFirstName { get; set; }
 
