@@ -45,9 +45,5 @@ namespace BrickOwlSharp.Client
         {
         }
 
-
-        internal void ValidateThrowException()
-        {
-        }
     }
 }
