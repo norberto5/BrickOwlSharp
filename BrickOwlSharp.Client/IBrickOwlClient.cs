@@ -50,6 +50,7 @@ namespace BrickOwlSharp.Client
         /// </summary>
         /// <param name="orderStatusFilter">Optional status filter.</param>
         /// <param name="minOrderTime">Optional minimum order time (UTC).</param>
+        /// <param name="minUpdateTime">Optional minimum update time (UTC). Filters orders updated at or after this time.</param>
         /// <param name="limit">Optional limit for the number of orders returned.</param>
         /// <param name="orderType">Optional order list type (store vs customer).</param>
         /// <param name="orderSortType">Optional sort order.</param>
@@ -58,6 +59,7 @@ namespace BrickOwlSharp.Client
         public Task<List<Order>> GetOrdersAsync(
             OrderStatus? orderStatusFilter = null,
             DateTime? minOrderTime = null,
+            DateTime? minUpdateTime = null,
             int? limit = null,
             OrderType? orderType = null,
             OrderSortType? orderSortType = null,

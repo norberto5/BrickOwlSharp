@@ -101,6 +101,7 @@ namespace BrickOwlSharp.Client
         public async Task<List<Order>> GetOrdersAsync(
             OrderStatus? orderStatusFilter = null,
             DateTime? minOrderTime = null,
+            DateTime? minUpdateTime = null,
             int? limit = null,
             OrderType? orderType = null,
             OrderSortType? orderSortType = null,
@@ -117,6 +118,11 @@ namespace BrickOwlSharp.Client
             if (minOrderTime.HasValue)
             {
                 url = AppendOptionalParam(url, "order_time", ((DateTimeOffset)minOrderTime.Value).ToUnixTimeSeconds());
+            }
+
+            if (minUpdateTime.HasValue)
+            {
+                url = AppendOptionalParam(url, "update_time", ((DateTimeOffset)minUpdateTime.Value).ToUnixTimeSeconds());
             }
 
             if (limit.HasValue)

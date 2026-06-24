@@ -194,4 +194,17 @@ public class BrickOwlClientApiKeyTests
         Assert.Contains("key=override-key", handler.CapturedUrl);
         Assert.DoesNotContain("key=factory-key", handler.CapturedUrl);
     }
+
+    [Fact]
+    public async Task GetOrdersAsync_WithMinUpdateTime_AppendsUpdateTimeAsUnixTimestamp()
+    {
+        BrickOwlClientConfiguration.Instance.ApiKey = "test-key";
+        var (client, handler) = BuildClient("[]");
+        var updateTime = new DateTime(2024, 1, 15, 12, 0, 0, DateTimeKind.Utc);
+        var expectedTimestamp = ((DateTimeOffset)updateTime).ToUnixTimeSeconds();
+
+        await client.GetOrdersAsync(minUpdateTime: updateTime);
+
+        Assert.Contains($"update_time={expectedTimestamp}", handler.CapturedUrl);
+    }
 }
