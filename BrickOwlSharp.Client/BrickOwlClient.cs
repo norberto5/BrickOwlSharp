@@ -790,6 +790,10 @@ namespace BrickOwlSharp.Client
                     ConditionStringConverter csv = new ConditionStringConverter();
                     value = csv.Write((Condition)rawValue);
                 }
+                else if ((converterName == "BoolStringConverter") && (rawValue != null))
+                {
+                    value = ((bool?)rawValue).Value ? "1" : "0";
+                }
                 else if (String.IsNullOrEmpty(converterName) && (rawValue != null))
                 {
                     if (rawValue is decimal v)

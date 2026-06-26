@@ -207,4 +207,26 @@ public class BrickOwlClientApiKeyTests
 
         Assert.Contains($"update_time={expectedTimestamp}", handler.CapturedUrl);
     }
+
+    [Fact]
+    public async Task UpdateInventoryAsync_ForSaleFalse_SendsForSaleZeroInBody()
+    {
+        BrickOwlClientConfiguration.Instance.ApiKey = "test-key";
+        var (client, handler) = BuildClient("{\"status\":\"success\"}");
+
+        await client.UpdateInventoryAsync(new UpdateInventory { ForSale = false });
+
+        Assert.Contains("for_sale=0", handler.CapturedBody);
+    }
+
+    [Fact]
+    public async Task UpdateInventoryAsync_ForSaleTrue_SendsForSaleOneInBody()
+    {
+        BrickOwlClientConfiguration.Instance.ApiKey = "test-key";
+        var (client, handler) = BuildClient("{\"status\":\"success\"}");
+
+        await client.UpdateInventoryAsync(new UpdateInventory { ForSale = true });
+
+        Assert.Contains("for_sale=1", handler.CapturedBody);
+    }
 }
