@@ -1,0 +1,134 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (e.g. 2.1.0)'
+        required: true
+        type: string
+      release_notes:
+        description: 'Release notes (optional, prepended to PackageReleaseNotes in csproj)'
+        required: false
+        type: string
+
+concurrency:
+  group: release-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 10.0.x
+
+    - name: Validate version format
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        if [[ ! "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "Error: '${VERSION}' is not a valid three-part semver (e.g. 2.1.0)"
+          exit 1
+        fi
+
+    - name: Update version in csproj
+      env:
+        VERSION: ${{ inputs.version }}
+        CSPROJ: BrickOwlSharp.Client/BrickOwlSharp.Client.csproj
+      run: |
+        python3 - <<'EOF'
+        import re, os, sys
+        csproj = os.environ['CSPROJ']
+        version = os.environ['VERSION']
+        with open(csproj) as f:
+            content = f.read()
+        for pattern, replacement in [
+            (r'<Version>[^<]*</Version>', f'<Version>{version}</Version>'),
+            (r'<AssemblyVersion>[^<]*</AssemblyVersion>', f'<AssemblyVersion>{version}.0</AssemblyVersion>'),
+            (r'<FileVersion>[^<]*</FileVersion>', f'<FileVersion>{version}.0</FileVersion>'),
+        ]:
+            new = re.sub(pattern, replacement, content, count=1)
+            if new == content:
+                print(f"Error: tag not found in csproj: {pattern}", file=sys.stderr)
+                sys.exit(1)
+            content = new
+        with open(csproj, 'w') as f:
+            f.write(content)
+        EOF
+
+    - name: Update release notes in csproj
+      if: inputs.release_notes != ''
+      env:
+        RELEASE_NOTES: ${{ inputs.release_notes }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        python3 - <<'EOF'
+        import re, os, html, sys
+        csproj = 'BrickOwlSharp.Client/BrickOwlSharp.Client.csproj'
+        version = os.environ['VERSION']
+        notes = html.escape(os.environ['RELEASE_NOTES'])
+        with open(csproj) as f:
+            content = f.read()
+        original = content
+        new_entry = f'{version}: {notes}'
+        def replace_notes(m):
+            existing = m.group(1).strip()
+            return f'<PackageReleaseNotes>{new_entry}\n{existing}</PackageReleaseNotes>'
+        content = re.sub(r'<PackageReleaseNotes>(.*?)</PackageReleaseNotes>', replace_notes, content, flags=re.DOTALL)
+        if content == original:
+            print("Error: <PackageReleaseNotes> tag not found in csproj; release notes were not updated", file=sys.stderr)
+            sys.exit(1)
+        with open(csproj, 'w') as f:
+            f.write(content)
+        EOF
+
+    - name: Restore dependencies
+      run: dotnet restore BrickOwlSharp.sln
+
+    - name: Build
+      run: dotnet build BrickOwlSharp.sln --no-restore -c Release
+
+    - name: Test
+      run: dotnet test BrickOwlSharp.Tests/BrickOwlSharp.Tests.csproj --no-build -c Release --verbosity normal
+
+    - name: Pack
+      run: dotnet pack BrickOwlSharp.Client/BrickOwlSharp.Client.csproj --no-build -c Release -o ./nupkgs
+
+    - name: Push to NuGet
+      run: |
+        dotnet nuget push ./nupkgs/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        dotnet nuget push ./nupkgs/*.snupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+    - name: Create GitHub Release
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        RELEASE_NOTES: ${{ inputs.release_notes }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        if gh release view "v${VERSION}" &>/dev/null; then
+          echo "GitHub Release v${VERSION} already exists, skipping"
+        else
+          gh release create "v${VERSION}" \
+            --title "v${VERSION}" \
+            --notes "${RELEASE_NOTES:-Release v${VERSION}}"
+        fi
+
+    - name: Commit and push version bump
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add BrickOwlSharp.Client/BrickOwlSharp.Client.csproj
+        git diff --cached --quiet || git commit -m "Release v${VERSION} [skip ci]"
+        git push
