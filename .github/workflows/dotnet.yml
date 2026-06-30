@@ -28,15 +28,10 @@ jobs:
     - name: Pack (pre-release)
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: |
-        VERSION=$(grep -oP '(?<=<Version>)[^<]+' BrickOwlSharp.Client/BrickOwlSharp.Client.csproj)
-        if [ -z "$VERSION" ]; then
-          echo "Error: could not extract version from csproj" >&2
-          exit 1
-        fi
         dotnet pack BrickOwlSharp.Client/BrickOwlSharp.Client.csproj \
           --no-build \
           -c Release \
-          -p:Version="${VERSION}-preview.${{ github.run_number }}" \
+          -p:Version="$(dotnet msbuild BrickOwlSharp.Client/BrickOwlSharp.Client.csproj -getProperty:Version)-preview.${{ github.run_number }}" \
           -o ./nupkgs
     - name: Upload prerelease packages
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -51,6 +46,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v4
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
@@ -61,6 +57,6 @@ jobs:
         name: prerelease-packages
         path: ./nupkgs/
     - name: Push to NuGet
-      run: |
-        dotnet nuget push ./nupkgs/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
-        dotnet nuget push ./nupkgs/*.snupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+      uses: ./.github/actions/nuget-push
+      with:
+        api-key: ${{ secrets.NUGET_API_KEY }}
